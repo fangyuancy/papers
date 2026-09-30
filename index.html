@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CS Paper Reading Gym | 计算机顶会文献精读微动作训练器</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti for celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            },
+            academic: {
+              slate: '#0f172a',
+              card: '#1e293b',
+              border: '#334155',
+              accent: '#38bdf8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom animations and token hover effects */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+    .animate-shake {
+      animation: shake 0.35s ease-in-out;
+    }
+    .token-clickable {
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      display: inline-block;
+      cursor: pointer;
+    }
+    .token-clickable:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+    /* Hide scrollbar for tabs */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-sky-500 selection:text-white flex flex-col">
+
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-mono font-bold text-lg">
+          λ
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-base md:text-lg tracking-tight text-white flex items-center gap-2">
+              CS Paper Reading Gym
+              <span class="text-xs font-mono font-medium px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800/80">v1.2</span>
+            </h1>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">计算机顶会文献精读刻意训练器 (NeurIPS / OSDI / ICLR / CVPR)</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2 md:space-x-4">
+        <!-- Streak & Points indicator -->
+        <div class="flex items-center gap-3 bg-slate-800/70 border border-slate-700/60 rounded-lg px-3 py-1.5 text-xs font-mono">
+          <div class="flex items-center gap-1.5 text-amber-400 font-semibold" title="连续答对天数/题目">
+            <i data-lucide="flame" class="w-4 h-4 fill-amber-400"></i>
+            <span id="streakCount">0</span>
+          </div>
+          <div class="w-px h-3.5 bg-slate-700"></div>
+          <div class="flex items-center gap-1.5 text-emerald-400 font-semibold" title="累计通过关卡">
+            <i data-lucide="award" class="w-4 h-4"></i>
+            <span id="scoreCount">0</span>/<span id="totalQuestionsCount">12</span>
+          </div>
+        </div>
+
+        <!-- Cheat Sheet Button -->
+        <button id="openCheatSheetBtn" class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition border border-slate-700">
+          <i data-lucide="book-open" class="w-3.5 h-3.5 text-sky-400"></i>
+          <span class="hidden md:inline">套路词速查</span>
+        </button>
+
+        <!-- Custom Paper Button -->
+        <button id="openCustomModalBtn" class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white transition shadow-sm">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+          <span>贴自己的论文</span>
+        </button>
+
+        <!-- GitHub Link -->
+        <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i data-lucide="github" class="w-4 h-4"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-6xl mx-auto w-full px-4 py-6 flex flex-col gap-6">
+    
+    <!-- Top Track Tabs Selector -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+      <div class="flex items-center gap-1 overflow-x-auto no-scrollbar w-full sm:w-auto" id="trackContainer">
+        <!-- Populated via JavaScript dynamically -->
+      </div>
+      
+      <div class="flex items-center gap-2 self-end sm:self-center text-xs text-slate-400">
+        <span id="trackProgressLabel">Track 1 / 4</span>
+        <button id="resetProgressBtn" class="text-slate-500 hover:text-red-400 p-1" title="重置本关进度">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Question Workspace -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- Left: Interactive Reading Stage (8 Cols) -->
+      <div class="lg:col-span-8 flex flex-col gap-4">
+        
+        <!-- Challenge Card Header -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl relative overflow-hidden">
+          <div class="flex items-center justify-between gap-4 mb-3">
+            <div class="flex items-center gap-2">
+              <span id="levelBadge" class="text-xs font-mono uppercase px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30">
+                Track 1 · Ex 1
+              </span>
+              <span id="venueTag" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                NeurIPS '23
+              </span>
+              <span id="difficultyTag" class="text-xs font-mono text-emerald-400 flex items-center gap-1">
+                ● Easy
+              </span>
+            </div>
+
+            <!-- Hint Trigger -->
+            <button id="showHintBtn" class="text-xs font-medium text-amber-400 hover:text-amber-300 flex items-center gap-1.5 bg-amber-950/40 hover:bg-amber-900/40 border border-amber-800/60 px-2.5 py-1 rounded-md transition">
+              <i data-lucide="lightbulb" class="w-3.5 h-3.5"></i>
+              <span>提示 (Hint)</span>
+            </button>
+          </div>
+
+          <!-- Prompt Directive -->
+          <div class="space-y-1 mb-4">
+            <h2 id="questionPrompt" class="text-base sm:text-lg font-semibold text-white leading-snug">
+              加载任务中...
+            </h2>
+            <p id="questionDescription" class="text-xs sm:text-sm text-slate-400">
+              请根据学术逻辑与语法特征完成微操作。
+            </p>
+          </div>
+
+          <!-- Dynamic Hint Callout (Hidden by default) -->
+          <div id="hintBox" class="hidden mb-4 p-3 rounded-lg bg-amber-950/30 border border-amber-800/50 text-amber-200 text-xs sm:text-sm flex items-start gap-2.5">
+            <i data-lucide="sparkles" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
+            <div id="hintContent">思考一下：修饰从句的引导词（如 which / that）内部动词不属于主句干。</div>
+          </div>
+
+          <!-- Interactive Snippet Container -->
+          <div class="p-4 sm:p-5 rounded-lg bg-slate-950/80 border border-slate-800 font-mono text-sm sm:text-base leading-relaxed tracking-wide shadow-inner min-h-[120px] flex items-center" id="textArenaContainer">
+            <!-- Words or Sentences will be injected here with interactive click tokens -->
+          </div>
+
+          <!-- Sentence-level Mode Toolbar (For Track 3: Fact vs Speculation) -->
+          <div id="sentenceTools" class="hidden mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="text-xs text-slate-400 flex items-center gap-2">
+              <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 绿色代表实验事实
+              <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 ml-2"></span> 橙色代表机制推论
+            </div>
+            <div class="text-xs font-mono text-slate-400" id="sentenceClassifiedStatus">
+              已分类: 0 / 2
+            </div>
+          </div>
+
+          <!-- Interactive Action Buttons -->
+          <div class="mt-5 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800/80">
+            <div class="text-xs text-slate-400 flex items-center gap-2">
+              <span id="selectionCounter" class="font-mono text-sky-400 font-medium">已选择: 0</span>
+              <span class="text-slate-600">|</span>
+              <span class="text-slate-500 text-xs hidden sm:inline">点击文字即可标记</span>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+              <button id="clearSelectionBtn" class="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700/80 rounded-lg transition border border-slate-700">
+                清除选择
+              </button>
+              <button id="verifyBtn" class="px-5 py-1.5 text-xs sm:text-sm font-semibold text-white bg-sky-600 hover:bg-sky-500 active:scale-95 rounded-lg transition shadow-md shadow-sky-600/20 flex items-center gap-1.5">
+                <span>提交验证</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feedback & Academic Breakdown Box -->
+        <div id="feedbackContainer" class="hidden rounded-xl border p-5 transition-all duration-300">
+          <!-- Dynamic Injected Feedback Header & Explanation -->
+        </div>
+
+      </div>
+
+      <!-- Right: Learning Coach, Mindset & Stats (4 Cols) -->
+      <div class="lg:col-span-4 flex flex-col gap-4">
+        
+        <!-- Track Master Mindset Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
+          <div class="flex items-center gap-2 text-sky-400 font-semibold text-xs tracking-wider uppercase mb-2">
+            <i data-lucide="compass" class="w-4 h-4"></i>
+            <span id="coachFocusTitle">本专项认知目标</span>
+          </div>
+          <p id="coachFocusDescription" class="text-xs text-slate-300 leading-relaxed mb-3">
+            计算机顶会论文通常在主语后堆叠长达3行的定语从句（Which/That/Where）。顶级阅读者的大脑会像语法剪刀一样自动屏蔽修饰语，直取谓语动词。
+          </p>
+          <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 font-mono text-[11px] text-slate-400 space-y-1" id="coachFormulaBox">
+            <div class="text-emerald-400 font-semibold">快速解码公式：</div>
+            <div class="text-slate-300">[主语系统] + <span class="text-slate-500">(括号屏蔽定语从句)</span> + <span class="text-sky-400 font-bold">[核心动作]</span> + [量化指标]</div>
+          </div>
+        </div>
+
+        <!-- Question List in Current Track -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="list-ordered" class="w-3.5 h-3.5 text-slate-400"></i>
+              本轨演练清单
+            </h3>
+            <span class="text-xs font-mono text-slate-400" id="trackItemCount">0/3 完成</span>
+          </div>
+          <div class="space-y-1.5" id="questionsListNav">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Mastery Badge Card -->
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-2xl border border-slate-700 shrink-0" id="badgeIcon">
+            🌱
+          </div>
+          <div>
+            <div class="text-xs font-mono text-slate-400">当前学术阅读段位</div>
+            <div class="text-sm font-bold text-white flex items-center gap-1.5" id="badgeTitle">
+              Novice Reviewer (预备审稿人)
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5" id="badgeDescription">
+              完成更多挑战以解锁下一段位徽章
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <div id="cheatSheetModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 rounded-lg bg-sky-500/20 text-sky-400">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-bold text-white text-base">计算机顶会学术写作高频套路词速查表</h3>
+        </div>
+        <button id="closeCheatSheetBtn" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Content with Quick Tabs -->
+      <div class="p-6 overflow-y-auto space-y-6 text-sm">
+        
+        <!-- Category 1: Hedging Words -->
+        <div>
+          <div class="flex items-center gap-2 text-sky-400 font-bold mb-2">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+            <span>1. 留退路与限定置信度 (Hedging Words)</span>
+          </div>
+          <p class="text-xs text-slate-400 mb-3">审稿人最讨厌绝对化吹嘘。高水平作者在下推论时会精准选用以下词汇限制结论边界：</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <div class="text-xs font-mono font-semibold text-emerald-400">推测类动词</div>
+              <p class="text-xs text-slate-300 mt-1">suggest, imply, indicate, hypothesize, extrapolate</p>
+              <span class="text-[10px] text-slate-500">表达“实验暗示了这一可能，但不做绝对担保”</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <div class="text-xs font-mono font-semibold text-amber-400">可能性情态词</div>
+              <p class="text-xs text-slate-300 mt-1">might, may, could, potentially, presumably</p>
+              <span class="text-[10px] text-slate-500">降低断言力度，避免反例直接打破论点</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <div class="text-xs font-mono font-semibold text-indigo-400">范围频次副词</div>
+              <p class="text-xs text-slate-300 mt-1">primarily, predominantly, largely, tend to</p>
+              <span class="text-[10px] text-slate-500">限定适用情景（如“主要在小规模数据有效”）</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category 2: Fact vs Speculation Verbs -->
+        <div>
+          <div class="flex items-center gap-2 text-emerald-400 font-bold mb-2">
+            <i data-lucide="split" class="w-4 h-4"></i>
+            <span>2. 客观事实 (Fact) 与机制推论 (Speculation) 标志词</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="p-3 rounded-lg bg-emerald-950/20 border border-emerald-900/40">
+              <div class="font-bold text-emerald-300 mb-1 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 事实报告动词 (Empirical Observation)
+              </div>
+              <p class="text-slate-300 font-mono">achieves, drops by, scales to, outperforms, measures, confirms</p>
+              <p class="text-slate-400 mt-1 text-[11px]">对应具体图表和实验日志，不可推翻的客观基准。</p>
+            </div>
+            <div class="p-3 rounded-lg bg-amber-950/20 border border-amber-900/40">
+              <div class="font-bold text-amber-300 mb-1 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span> 归因与推论动词 (Attribution & Speculation)
+              </div>
+              <p class="text-slate-300 font-mono">we attribute this to, stems from, accounts for, is credited to</p>
+              <p class="text-slate-400 mt-1 text-[11px]">作者对现象的假设解释，也是最值得写 Follow-up 论证的地方。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category 3: Limitations & Reviewer Trap Signals -->
+        <div>
+          <div class="flex items-center gap-2 text-rose-400 font-bold mb-2">
+            <i data-lucide="alert-octagon" class="w-4 h-4"></i>
+            <span>3. 审稿人陷阱与隐含边界信号 (Limitation Signals)</span>
+          </div>
+          <p class="text-xs text-slate-400 mb-2">看到以下短语，立即警惕作者是否有未公开的基线劣势或硬件依赖：</p>
+          <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-300 space-y-1">
+            <div>• <span class="text-rose-400">under controlled contention:</span> 实际生产环境的高频竞争未测试。</div>
+            <div>• <span class="text-rose-400">assuming independent uniform distribution:</span> 现实流量多为长尾倾斜分布。</div>
+            <div>• <span class="text-rose-400">when normalized against baseline X:</span> 注意观察绝对吞吐量是否过低。</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-4 border-t border-slate-800 bg-slate-900 text-right">
+        <button id="closeCheatSheetBtn2" class="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition">
+          掌握了，返回训练
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="customModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-bold text-white text-base">录入正在读的顶会论文段落</h3>
+        </div>
+        <button id="closeCustomModalBtn" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="customForm" class="p-6 overflow-y-auto space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">所属顶会 / 年份 (Venue & Year)</label>
+          <input type="text" id="custVenue" placeholder="e.g. OSDI '24 or ICLR '24" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 font-mono focus:outline-none focus:border-sky-500">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">训练类型 (Training Track)</label>
+          <select id="custTrack" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 font-mono focus:outline-none focus:border-sky-500">
+            <option value="track1">Track 1: 核心动词抓取 (Core Verb)</option>
+            <option value="track2">Track 2: 限定词与留退路 (Hedging Words)</option>
+            <option value="track4">Track 4: 局限性与隐含假设 (Reviewer Critique)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">任务引导指令 (Prompt)</label>
+          <input type="text" id="custPrompt" placeholder="e.g. 点击选出整句真正的核心主动词" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-sky-500">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">论文段落英文原文 (English Excerpt)</label>
+          <textarea id="custSnippet" rows="3" placeholder="Paste single or compound sentence here..." required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 font-mono focus:outline-none focus:border-sky-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">标准答案单词 (Exact Answers - 逗号分隔)</label>
+          <input type="text" id="custAnswers" placeholder="e.g. reduces 或 suggest, might" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 font-mono focus:outline-none focus:border-sky-500">
+          <p class="text-[10px] text-slate-500 mt-1">需与上面句子里的英文拼写一致（不区分大小写与标点）。</p>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">学术解析或提示 (Analysis & Reasoning)</label>
+          <textarea id="custExplanation" rows="2" placeholder="为什么这个词是核心动词/限定词？给出学术语法理由..." required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-sky-500"></textarea>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" id="closeCustomModalBtn2" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium">取消</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium flex items-center gap-1.5 shadow-md">
+            <i data-lucide="save" class="w-3.5 h-3.5"></i>
+            <span>保存并立即练习</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_TRACKS = [
+      {
+        id: 'track1',
+        title: 'Track 1: 核心动词抓取',
+        subtitle: 'Core Verb & Syntax De-cluttering',
+        icon: 'scissors',
+        focusTitle: '核心动词与长定语剥离',
+        focusDesc: '系统类顶会作者最爱用【主语 + which 从句 + to 不定式目的状语】堆砌修饰。训练自己的眼睛瞬间跳过修饰语，抓取承担主干责任的谓语动词。',
+        formula: '解码公式：[主语名词] + (跳过从句定语) + 【核心主动词】 + [量化指标]',
+        questions: [
+          {
+            id: 't1_q1',
+            venue: "NeurIPS '23 (Systems ML)",
+            difficulty: 'Easy',
+            prompt: '在下面包含复杂修饰从句的系统描述句中，点击找出整个句子的真正核心谓语动词 (Predicative Verb)。',
+            description: '提示：忽略 which 引导的修饰成分，寻找能够独立支撑句意的主谓结构。',
+            hint: '注意观察逗号分隔的从句 "which orchestrates..."，它的内部动词不是主句的谓语。',
+            type: 'token_selection',
+            singleTarget: true,
+            snippet: "Our proposed distributed dispatching framework, which orchestrates tensor partitions across heterogeneous accelerators to minimize inter-node communication latency, reduces end-to-end inference tail latency by 3.8x under bursty traffic conditions.",
+            correctTokens: ["reduces"],
+            analysis: {
+              mainSubject: "Our proposed distributed dispatching framework",
+              verb: "reduces",
+              directObject: "end-to-end inference tail latency",
+              modifierTraps: ["orchestrates (定语从句内部动词)", "minimize (目的不定式)"],
+              explanation: "句子的主干为：Framework reduces latency by 3.8x。中间长达20词的逗号短语仅仅是对 framework 的功能进行阐述，不可被误认为主谓连接。"
+            }
+          },
+          {
+            id: 't1_q2',
+            venue: "OSDI '24 (Storage & OS)",
+            difficulty: 'Medium',
+            prompt: '点击选出下列长句的主句核心谓语动词。',
+            description: '长短语包含并列关系与伴随状语，测试从句剥离敏锐度。',
+            hint: '找准是谁在 "demonstrate"？还是有更深层的主干？',
+            type: 'token_selection',
+            singleTarget: true,
+            snippet: "The non-volatile storage engine that asynchronously flushes journal blocks while continuously updating in-memory radix tree structures guarantees strict ACID consistency without incurring runtime locking contention.",
+            correctTokens: ["guarantees"],
+            analysis: {
+              mainSubject: "The non-volatile storage engine",
+              verb: "guarantees",
+              directObject: "strict ACID consistency",
+              modifierTraps: ["flushes (从句1动词)", "updating (分词短语)", "incurring (介词宾语动名词)"],
+              explanation: "从句从 'that asynchronously flushes...' 一路延伸到 'radix tree structures'，真正的句式骨架极其简洁：'The engine guarantees strict ACID consistency'。"
+            }
+          },
+          {
+            id: 't1_q3',
+            venue: "ICLR '24 (Representation Learning)",
+            difficulty: 'Hard',
+            prompt: '找到承载全句论述核心结论的谓语主动词。',
+            description: '主语部分带有介词短语修饰，注意主谓一致判断。',
+            hint: '主语核心词是 Observations，动词必须呼应复数形态。',
+            type: 'token_selection',
+            singleTarget: true,
+            snippet: "Empirical observations regarding gradient collapse during diffusion backward passes across ultra-deep visual backbone networks reveal persistent dimensional degeneracy in high-frequency feature subspaces.",
+            correctTokens: ["reveal"],
+            analysis: {
+              mainSubject: "Empirical observations",
+              verb: "reveal",
+              directObject: "persistent dimensional degeneracy",
+              modifierTraps: ["passes (名词误判)", "networks (介词宾语)"],
+              explanation: "介词短语 'regarding gradient collapse... across ultra-deep visual backbone networks' 只是修饰 observations 的内容，核心骨干为 'Observations reveal persistent dimensional degeneracy'。"
+            }
+          }
+        ]
+      },
+      {
+        id: 'track2',
+        title: 'Track 2: 留退路限定词',
+        subtitle: 'Hedging & Defense Spotting',
+        icon: 'shield',
+        focusTitle: '识破留退路词汇 (Hedging)',
+        focusDesc: '顶会论文中的神仙作者绝不会写“我们的算法解决了一切问题”。他们会大量使用情态动词、主观推测词和范围修饰词，以避免被严苛审稿人挑出反例一票否决。',
+        formula: '解码公式：[强断言] -> 加入 [may/suggest/largely] -> 成为 [无懈可击的学术论文话术]',
+        questions: [
+          {
+            id: 't2_q1',
+            venue: "NeurIPS '23 (Theory / LLMs)",
+            difficulty: 'Medium',
+            prompt: '在下述消融分析结论中，点击选出作者用来“留退路、降低断言绝对性”的 3 个限定词汇 (Hedging Words)。',
+            description: '多选模式：点击段落中的 3 个单词进行标记。',
+            hint: '寻找表示“暗示”、“可能”以及“并非全盘适用”的词汇。',
+            type: 'token_selection',
+            targetCount: 3,
+            snippet: "The ablation results suggest that self-attention layers might be primarily capturing positional heuristics rather than semantic dependencies on smaller datasets.",
+            correctTokens: ["suggest", "might", "primarily"],
+            analysis: {
+              hedgingTokens: [
+                { word: "suggest", type: "柔性引出动词", desc: "避免直接用 proves 或 confirms，表示只是数据给出的启发推论。" },
+                { word: "might", type: "可能性情态词", desc: "退一步，承认存在其他未被排除的解释可能。" },
+                { word: "primarily", type: "范围频次限定", desc: "避免全称断言，留出局部语义被捕捉的余地。" }
+              ],
+              explanation: "如果去掉这三个词，原句将变成：'The results prove that self-attention is capturing positional heuristics...'，这种绝对论调极易在同行评议中被一个合成反例直接摧毁。"
+            }
+          },
+          {
+            id: 't2_q2',
+            venue: "CVPR '24 (Vision-Language)",
+            difficulty: 'Medium',
+            prompt: '找出作者在讨论跨模态泛化界限时使用的 2 个留退路副词/动词。',
+            description: '多选模式：点击找出 2 个起退路限定作用的词汇。',
+            hint: '关注副词修饰语与推论动词。',
+            type: 'token_selection',
+            targetCount: 2,
+            snippet: "Zero-shot evaluation indicates that our contrastive alignment mechanism largely circumvents texture bias across uncurated benchmark distributions.",
+            correctTokens: ["indicates", "largely"],
+            analysis: {
+              hedgingTokens: [
+                { word: "indicates", type: "推测动词", desc: "代替 'demonstrates convincingly'，降低置信度门槛。" },
+                { word: "largely", type: "程度限定", desc: "防杠词：承认并没有 100% 消除 texture bias，只是大部分规避。" }
+              ],
+              explanation: "使用 largely 能有效应对 Reviewer 提出 'Why on dataset X texture bias still exists?' 的刁钻提问。"
+            }
+          },
+          {
+            id: 't2_q3',
+            venue: "ICLR '24 (Optimization)",
+            difficulty: 'Hard',
+            prompt: '定位作者在推测理论下界时隐藏的 3 个防御性词汇 (Defensive Claims)。',
+            description: '多选模式：选出 3 个限定词。',
+            hint: '包含情态动词、主观推论动词以及概率副词。',
+            type: 'token_selection',
+            targetCount: 3,
+            snippet: "We hypothesize that asynchronous gradient updates potentially induce implicit regularization, which appears consistent with the bounded variance observed in early training epochs.",
+            correctTokens: ["hypothesize", "potentially", "appears"],
+            analysis: {
+              hedgingTokens: [
+                { word: "hypothesize", type: "假说声明", desc: "直言这是猜想假说，而非严密数学定理。" },
+                { word: "potentially", type: "可能状语", desc: "防止在极端 learning rate 下隐式正则失效被攻击。" },
+                { word: "appears", type: "表象连词", desc: "用 '看似一致' 代替 '严格证明了一致性'。" }
+              ],
+              explanation: "在机器学习顶会的 Theory/Optimization 章节中，这是非常典型的'假说先行'话术，既表明独创直觉，又规避了必须补齐充要条件证明的义务。"
+            }
+          }
+        ]
+      },
+      {
+        id: 'track3',
+        title: 'Track 3: 事实 vs 机制推论',
+        subtitle: 'Fact vs. Mechanism Speculation',
+        icon: 'split',
+        focusTitle: '实验事实与机制推论剥离',
+        focusDesc: '论文读者最常犯的错误，就是把作者的【自圆其说（Speculation）】当成【不可辩驳的客观事实（Fact）】。通过双色标注快速认清：哪些是真实日志读数，哪些只是作者的故事。',
+        formula: '解码公式：[客观实验读数 (Fact)] ⇎ [作者赋予的因果故事 (Speculation)]',
+        questions: [
+          {
+            id: 't3_q1',
+            venue: "NeurIPS '23 (Transformer Memory)",
+            difficulty: 'Medium',
+            prompt: '对下列两句话进行分类：区分哪句是客观实验读数 (Fact)，哪句是作者的机制推论 (Speculation)。',
+            description: '点击对应句子卡片上的标签按钮完成标记。',
+            hint: '数字和吞吐量下降属于事实；"stems from (源于)" 属于作者的机制假说。',
+            type: 'sentence_classification',
+            sentences: [
+              {
+                id: 's1',
+                text: "Peak GPU memory utilization dropped by 22.4% after introducing the cached gradient operator across all 8 nodes.",
+                expected: 'fact',
+                typeLabel: '客观事实读数 (Fact)',
+                reason: "包含精确的度量指标（22.4%）与具体硬件环境，属于可复现的实验测量读数。"
+              },
+              {
+                id: 's2',
+                text: "This performance gain stems from the mitigation of redundant memory access overhead in the backward pass.",
+                expected: 'speculation',
+                typeLabel: '主观机制推论 (Speculation)',
+                reason: "使用 'stems from (源于)'，这是作者对显存下降原因提出的机理解释，并非传感器直接测得的读数。"
+              }
+            ]
+          },
+          {
+            id: 't3_q2',
+            venue: "SIGCOMM '24 (Network ML)",
+            difficulty: 'Medium',
+            prompt: '识别以下两句话：区分【客观观测事实】与【归因机制推论】。',
+            description: '为每句话选择 [事实] 或 [推论] 标记。',
+            hint: '有明确对比基线和测量数字的是事实；带有 "attribute this behavior to" 属于归因推论。',
+            type: 'sentence_classification',
+            sentences: [
+              {
+                id: 's1',
+                text: "We attribute this anomalous throughput degradation to head-of-line packet contention occurring within crossbar switches under saturated buffer queues.",
+                expected: 'speculation',
+                typeLabel: '主观机制推论 (Speculation)',
+                reason: "带有明确的主观归因词 'attribute this... to'，是作者构建的模型假设解释。"
+              },
+              {
+                id: 's2',
+                text: "Under an all-to-all communication pattern with 1024 workers, average 99th percentile flow completion time rose from 12ms to 84ms.",
+                expected: 'fact',
+                typeLabel: '客观事实读数 (Fact)',
+                reason: "测量基准清晰，列举了 99th 百分位流完成时间从 12ms 升到 84ms 的硬数据。"
+              }
+            ]
+          },
+          {
+            id: 't3_q3',
+            venue: "ICLR '24 (Diffusion Model Distillation)",
+            difficulty: 'Hard',
+            prompt: '判定这两条来自方法讨论段的句子，明确哪些已由实验敲死，哪些仍属理论推测。',
+            description: '双色标记完成验证。',
+            hint: '观察动词是 achieves (达成) 还是 implies (暗示可能)。',
+            type: 'sentence_classification',
+            sentences: [
+              {
+                id: 's1',
+                text: "The distilled 4-step generator achieves an FID score of 2.14 on ImageNet 512x512 with 62 FPS inference throughput on a single RTX 4090.",
+                expected: 'fact',
+                typeLabel: '客观事实读数 (Fact)',
+                reason: "FID 读数 2.14 和 62 FPS 是通过具体基准测试获得的指标数据。"
+              },
+              {
+                id: 's2',
+                text: "This trajectory contraction implies that the flow matching objective naturally penalizes curvature in semantic manifold regions.",
+                expected: 'speculation',
+                typeLabel: '主观机制推论 (Speculation)',
+                reason: "动词 'implies (暗示)' 表明这属于作者对流匹配动力学行为的定性推测。"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'track4',
+        title: 'Track 4: 审稿人挑刺与边界',
+        subtitle: 'Reviewer Critique & Limitation Spotting',
+        icon: 'alert-triangle',
+        focusTitle: '审稿人视角找茬 (Reviewer Mindset)',
+        focusDesc: '顶级学术阅读的高级境界，不是“作者说什么我都信”，而是立刻发现作者在实验设计中偷换的变量、隐瞒的局限与未经证明的前提假设。',
+        formula: '解码公式：[寻找条件限定短语] ➔ 揪出未受控隐蔽变量 ➔ 构思驳论反例',
+        questions: [
+          {
+            id: 't4_q1',
+            venue: "NeurIPS '23 (Safety & Alignment)",
+            difficulty: 'Hard',
+            prompt: '审稿人挑刺挑战：请在下面结论中，点击找出作者用于掩盖现实落地难度的一处核心“实验理想化先决条件”短语中的关键词。',
+            description: '点击选中代表假设局限性的关键单词。',
+            hint: '留意句末的修饰状语，特别是 "assuming" 后面引导的理想化限定。',
+            type: 'token_selection',
+            singleTarget: true,
+            snippet: "Our adversarial defense pipeline preserves 98.6% classification accuracy under L-infinity bounded perturbation attacks, assuming access to uncorrupted validation distribution priors during runtime.",
+            correctTokens: ["uncorrupted"],
+            analysis: {
+              mainWeakness: "强行假定运行时能拿到未被污染的验证集先验 (uncorrupted validation distribution priors)",
+              reviewerAngle: "现实恶意攻击中，攻击者往往会同步投毒 validation priors。作者这一关键假定使该防守机制在零信任真实网络场景中直接失效。",
+              explanation: "抓准限定词 'uncorrupted'，即可在写 Review 或开题反驳时提出精准一击：'The defense critically hinges on uncorrupted priors, which is unrealistic under adaptive attacks.'"
+            }
+          },
+          {
+            id: 't4_q2',
+            venue: "OSDI '24 (Cloud Distributed Systems)",
+            difficulty: 'Hard',
+            prompt: '找出作者限定自己吞吐量优势仅仅在【静态负载】下成立的限制性修饰词。',
+            description: '点击选出限制实验成立场景的形容词。',
+            hint: '寻找修饰 workload 的特定词汇。',
+            type: 'token_selection',
+            singleTarget: true,
+            snippet: "The proposed memory disaggregation runtime delivers a 4.2x reduction in tail latency over vanilla RDMA baselines under strictly deterministic workload arrival patterns.",
+            correctTokens: ["deterministic"],
+            analysis: {
+              mainWeakness: "仅在严格确定性（deterministic）请求到达模式下有效",
+              reviewerAngle: "数据中心真实流量都是突发长尾（Bursty & Pareto distributed）分布。确定性负载极大地简化了锁竞争和调度复杂度，属于刻意挑选有利于自己的评测集。",
+              explanation: "词汇 'deterministic' 暴露了该系统极有可能在泊松或突发流量下性能严重劣化。"
+            }
+          },
+          {
+            id: 't4_q3',
+            venue: "ICLR '24 (Few-shot Transfer)",
+            difficulty: 'Medium',
+            prompt: '点击选出句子中表明该超参数调节存在严重数据泄漏隐患的关键限定词。',
+            description: '点击选出揭示潜在漏洞的修饰词。',
+            hint: '寻找与 oracle（神谕/作弊级已知信息）相关的词语。',
+            type: 'token_selection',
+            singleTarget: true,
+            snippet: "The framework consistently surpasses standard prompting strategies when configured with oracle test-domain class name annotations.",
+            correctTokens: ["oracle"],
+            analysis: {
+              mainWeakness: "配置了测试域的神谕标注 (oracle test-domain annotations)",
+              reviewerAngle: "使用 'oracle' 意味着模型在推理时提前知道了测试集的金标准类别名称，这在真正的 Few-shot 开放域是不合法的作弊先验。",
+              explanation: "只要在顶会论文中看到 'oracle'，通常说明该方法在脱离人工精细标注辅助时无法端到端运行。"
+            }
+          }
+        ]
+      }
+    ];
+
+    const STORAGE_KEY = 'cs_paper_gym_state_v1';
+    let appState = {
+      activeTrackId: 'track1',
+      activeQuestionIndex: 0,
+      streak: 0,
+      solvedQuestionIds: [],
+      selectedTokens: [],
+      sentenceClassifications: {}, // { 's1': 'fact', 's2': 'speculation' }
+      customTracks: []
+    };
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          appState = { ...appState, ...parsed };
+        }
+      } catch (e) {
+        console.error("Failed to load local storage state:", e);
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          activeTrackId: appState.activeTrackId,
+          activeQuestionIndex: appState.activeQuestionIndex,
+          streak: appState.streak,
+          solvedQuestionIds: appState.solvedQuestionIds,
+          customTracks: appState.customTracks
+        }));
+      } catch (e) {
+        console.error("Failed to save state:", e);
+      }
+    }
+
+    function getAllTracks() {
+      return [...DEFAULT_TRACKS, ...appState.customTracks];
+    }
+
+    function getCurrentTrack() {
+      const tracks = getAllTracks();
+      return tracks.find(t => t.id === appState.activeTrackId) || tracks[0];
+    }
+
+    function getCurrentQuestion() {
+      const track = getCurrentTrack();
+      return track.questions[appState.activeQuestionIndex] || track.questions[0];
+    }
+
+    // Clean word token for comparison (remove punctuation, lower case)
+    function sanitizeToken(token) {
+      return token.toLowerCase().replace(/^[^\w]+|[^\w]+$/g, '');
+    }
+
+    function updateStatsHeader() {
+      const totalQuestions = getAllTracks().reduce((acc, t) => acc + t.questions.length, 0);
+      const solvedCount = appState.solvedQuestionIds.length;
+
+      document.getElementById('streakCount').textContent = appState.streak;
+      document.getElementById('scoreCount').textContent = solvedCount;
+      document.getElementById('totalQuestionsCount').textContent = totalQuestions;
+
+      // Update Mastery Badge
+      const badgeIcon = document.getElementById('badgeIcon');
+      const badgeTitle = document.getElementById('badgeTitle');
+      const badgeDesc = document.getElementById('badgeDescription');
+
+      if (solvedCount >= 10) {
+        badgeIcon.textContent = '👑';
+        badgeTitle.textContent = 'Area Chair (领域主席级审稿专家)';
+        badgeDesc.textContent = '对长难句定语剥离与防御性推论洞若观火，百毒不侵。';
+      } else if (solvedCount >= 6) {
+        badgeIcon.textContent = '🔍';
+        badgeTitle.textContent = 'Meta Reviewer (资深同行评审)';
+        badgeDesc.textContent = '能快速识别实验事实与作者机制假设的边界。';
+      } else if (solvedCount >= 3) {
+        badgeIcon.textContent = '⚡';
+        badgeTitle.textContent = 'Primary Reviewer (顶会一线评审员)';
+        badgeDesc.textContent = '掌握了谓语动词快速抓取与限定词扫描肌肉记忆。';
+      } else {
+        badgeIcon.textContent = '🌱';
+        badgeTitle.textContent = 'Novice Reviewer (预备审稿人)';
+        badgeDesc.textContent = '完成更多微动作练习以解锁进阶学术头衔。';
+      }
+    }
+
+    function renderTrackTabs() {
+      const trackContainer = document.getElementById('trackContainer');
+      trackContainer.innerHTML = '';
+      const tracks = getAllTracks();
+
+      tracks.forEach((track, index) => {
+        const isActive = track.id === appState.activeTrackId;
+        const btn = document.createElement('button');
+        btn.className = `flex items-center gap-2 px-3.5 py-2 text-xs font-medium rounded-lg transition whitespace-nowrap ${
+          isActive 
+            ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-sm' 
+            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-transparent'
+        }`;
+        
+        btn.innerHTML = `
+          <i data-lucide="${track.icon || 'book'}" class="w-3.5 h-3.5"></i>
+          <span>${track.title.split(':')[0]}</span>
+        `;
+        
+        btn.onclick = () => {
+          appState.activeTrackId = track.id;
+          appState.activeQuestionIndex = 0;
+          appState.selectedTokens = [];
+          appState.sentenceClassifications = {};
+          saveState();
+          renderApp();
+        };
+
+        trackContainer.appendChild(btn);
+      });
+
+      // Update Track index text
+      const currentTrackIndex = tracks.findIndex(t => t.id === appState.activeTrackId);
+      document.getElementById('trackProgressLabel').textContent = `Track ${currentTrackIndex + 1} / ${tracks.length}`;
+    }
+
+    function renderQuestionListNav() {
+      const nav = document.getElementById('questionsListNav');
+      nav.innerHTML = '';
+      const currentTrack = getCurrentTrack();
+      let completedInTrack = 0;
+
+      currentTrack.questions.forEach((q, idx) => {
+        const isSolved = appState.solvedQuestionIds.includes(q.id);
+        if (isSolved) completedInTrack++;
+        const isCurrent = idx === appState.activeQuestionIndex;
+
+        const row = document.createElement('div');
+        row.className = `flex items-center justify-between p-2 rounded-lg text-xs cursor-pointer transition ${
+          isCurrent 
+            ? 'bg-slate-800 text-sky-300 border border-slate-700 font-semibold' 
+            : 'hover:bg-slate-800/50 text-slate-400'
+        }`;
+
+        row.innerHTML = `
+          <div class="flex items-center gap-2 truncate">
+            <span class="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-mono ${
+              isSolved ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'
+            }">
+              ${isSolved ? '✓' : idx + 1}
+            </span>
+            <span class="truncate">${q.venue} · ${q.prompt.substring(0, 16)}...</span>
+          </div>
+          <span class="text-[10px] font-mono ${q.difficulty === 'Easy' ? 'text-emerald-400' : q.difficulty === 'Medium' ? 'text-amber-400' : 'text-rose-400'}">${q.difficulty}</span>
+        `;
+
+        row.onclick = () => {
+          appState.activeQuestionIndex = idx;
+          appState.selectedTokens = [];
+          appState.sentenceClassifications = {};
+          renderApp();
+        };
+
+        nav.appendChild(row);
+      });
+
+      document.getElementById('trackItemCount').textContent = `${completedInTrack}/${currentTrack.questions.length} 完成`;
+    }
+
+    function renderActiveQuestion() {
+      const q = getCurrentQuestion();
+      const currentTrack = getCurrentTrack();
+
+      // Update Track mindset coach info
+      document.getElementById('coachFocusTitle').textContent = currentTrack.focusTitle || "本专项认知目标";
+      document.getElementById('coachFocusDescription').textContent = currentTrack.focusDesc || "";
+      document.getElementById('coachFormulaBox').innerHTML = `
+        <div class="text-emerald-400 font-semibold">快速解码公式：</div>
+        <div class="text-slate-300">${currentTrack.formula || ""}</div>
+      `;
+
+      // Header tags
+      document.getElementById('levelBadge').textContent = `${currentTrack.title.split(':')[0]} · Ex ${appState.activeQuestionIndex + 1}`;
+      document.getElementById('venueTag').textContent = q.venue;
+      
+      const diffTag = document.getElementById('difficultyTag');
+      diffTag.textContent = `● ${q.difficulty}`;
+      diffTag.className = `text-xs font-mono flex items-center gap-1 ${
+        q.difficulty === 'Easy' ? 'text-emerald-400' : q.difficulty === 'Medium' ? 'text-amber-400' : 'text-rose-400'
+      }`;
+
+      // Prompt and hint
+      document.getElementById('questionPrompt').textContent = q.prompt;
+      document.getElementById('questionDescription').textContent = q.description;
+      document.getElementById('hintContent').textContent = q.hint || "仔细推敲句子中的从句引导词与限定副词。";
+      document.getElementById('hintBox').classList.add('hidden');
+
+      // Hide feedback box on question switch
+      const feedbackContainer = document.getElementById('feedbackContainer');
+      feedbackContainer.classList.add('hidden');
+
+      // Setup Text Arena based on Question Type
+      const arena = document.getElementById('textArenaContainer');
+      const sentenceTools = document.getElementById('sentenceTools');
+      arena.innerHTML = '';
+
+      if (q.type === 'sentence_classification') {
+        // Track 3: Sentence Classification Mode
+        sentenceTools.classList.remove('hidden');
+        renderSentenceClassificationArena(q, arena);
+      } else {
+        // Token selection mode (Track 1, Track 2, Track 4)
+        sentenceTools.classList.add('hidden');
+        renderTokenSelectionArena(q, arena);
+      }
+
+      updateSelectionCountLabel();
+    }
+
+    function renderTokenSelectionArena(q, container) {
+      const text = q.snippet;
+      const words = text.split(/\s+/);
+
+      const wrapper = document.createElement('div');
+      wrapper.className = "flex flex-wrap gap-x-1.5 gap-y-2.5 items-center";
+
+      words.forEach((rawWord, tokenIndex) => {
+        const cleanWord = sanitizeToken(rawWord);
+        const tokenSpan = document.createElement('span');
+        
+        const isSelected = appState.selectedTokens.includes(tokenIndex);
+
+        tokenSpan.className = `token-clickable px-1.5 py-0.5 rounded text-sm sm:text-base border ${
+          isSelected 
+            ? 'bg-sky-500 text-white font-bold border-sky-400 shadow-md ring-2 ring-sky-400/40' 
+            : 'bg-slate-900/90 text-slate-200 border-slate-800 hover:border-slate-600 hover:bg-slate-800'
+        }`;
+
+        tokenSpan.textContent = rawWord;
+        tokenSpan.dataset.index = tokenIndex;
+        tokenSpan.dataset.cleanWord = cleanWord;
+
+        tokenSpan.onclick = () => {
+          handleTokenClick(tokenIndex, q);
+        };
+
+        wrapper.appendChild(tokenSpan);
+      });
+
+      container.appendChild(wrapper);
+    }
+
+    function handleTokenClick(tokenIndex, question) {
+      const single = question.singleTarget;
+      if (single) {
+        // Single selection
+        if (appState.selectedTokens.includes(tokenIndex)) {
+          appState.selectedTokens = [];
+        } else {
+          appState.selectedTokens = [tokenIndex];
+        }
+      } else {
+        // Multiple selection
+        const pos = appState.selectedTokens.indexOf(tokenIndex);
+        if (pos > -1) {
+          appState.selectedTokens.splice(pos, 1);
+        } else {
+          appState.selectedTokens.push(tokenIndex);
+        }
+      }
+
+      // Re-render tokens without clearing whole DOM
+      const arena = document.getElementById('textArenaContainer');
+      const spans = arena.querySelectorAll('.token-clickable');
+      spans.forEach(span => {
+        const idx = parseInt(span.dataset.index);
+        const isSelected = appState.selectedTokens.includes(idx);
+        span.className = `token-clickable px-1.5 py-0.5 rounded text-sm sm:text-base border ${
+          isSelected 
+            ? 'bg-sky-500 text-white font-bold border-sky-400 shadow-md ring-2 ring-sky-400/40' 
+            : 'bg-slate-900/90 text-slate-200 border-slate-800 hover:border-slate-600 hover:bg-slate-800'
+        }`;
+      });
+
+      updateSelectionCountLabel();
+    }
+
+    function renderSentenceClassificationArena(q, container) {
+      const wrapper = document.createElement('div');
+      wrapper.className = "w-full space-y-4";
+
+      q.sentences.forEach((sent, index) => {
+        const userChoice = appState.sentenceClassifications[sent.id] || null;
+
+        const sentCard = document.createElement('div');
+        sentCard.className = `p-4 rounded-xl border transition-all ${
+          userChoice === 'fact' 
+            ? 'bg-emerald-950/20 border-emerald-500/50 text-emerald-100'
+            : userChoice === 'speculation'
+            ? 'bg-amber-950/20 border-amber-500/50 text-amber-100'
+            : 'bg-slate-900/90 border-slate-800 text-slate-200'
+        }`;
+
+        sentCard.innerHTML = `
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 font-mono text-sm leading-relaxed">
+              <span class="text-xs font-semibold px-2 py-0.5 rounded mr-2 ${
+                userChoice === 'fact' ? 'bg-emerald-500/30 text-emerald-300' : userChoice === 'speculation' ? 'bg-amber-500/30 text-amber-300' : 'bg-slate-800 text-slate-400'
+              }">
+                S${index + 1}
+              </span>
+              ${sent.text}
+            </div>
+            
+            <div class="flex sm:flex-col gap-1.5 shrink-0">
+              <button data-sent="${sent.id}" data-type="fact" class="sent-toggle-btn px-2.5 py-1 text-xs font-semibold rounded border transition flex items-center gap-1 ${
+                userChoice === 'fact' 
+                  ? 'bg-emerald-600 text-white border-emerald-500' 
+                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+              }">
+                <span class="w-2 h-2 rounded-full ${userChoice === 'fact' ? 'bg-white' : 'bg-emerald-400'}"></span>
+                <span>事实 (Fact)</span>
+              </button>
+
+              <button data-sent="${sent.id}" data-type="speculation" class="sent-toggle-btn px-2.5 py-1 text-xs font-semibold rounded border transition flex items-center gap-1 ${
+                userChoice === 'speculation' 
+                  ? 'bg-amber-600 text-white border-amber-500' 
+                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+              }">
+                <span class="w-2 h-2 rounded-full ${userChoice === 'speculation' ? 'bg-white' : 'bg-amber-400'}"></span>
+                <span>推论 (Speculation)</span>
+              </button>
+            </div>
+          </div>
+        `;
+
+        wrapper.appendChild(sentCard);
+      });
+
+      container.appendChild(wrapper);
+
+      // Bind button events
+      wrapper.querySelectorAll('.sent-toggle-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          const sentId = btn.dataset.sent;
+          const type = btn.dataset.type;
+          appState.sentenceClassifications[sentId] = type;
+          renderActiveQuestion();
+        };
+      });
+
+      // Update status counter
+      const totalSents = q.sentences.length;
+      const filledSents = Object.keys(appState.sentenceClassifications).length;
+      document.getElementById('sentenceClassifiedStatus').textContent = `已分类: ${filledSents} / ${totalSents}`;
+    }
+
+    function updateSelectionCountLabel() {
+      const q = getCurrentQuestion();
+      const counter = document.getElementById('selectionCounter');
+      if (q.type === 'sentence_classification') {
+        const total = q.sentences.length;
+        const done = Object.keys(appState.sentenceClassifications).length;
+        counter.textContent = `已标记: ${done}/${total} 句`;
+      } else {
+        const target = q.singleTarget ? 1 : (q.targetCount || q.correctTokens.length);
+        counter.textContent = `已选择: ${appState.selectedTokens.length} / 需选: ${target} 个词`;
+      }
+    }
+
+    function verifyCurrentAnswer() {
+      const q = getCurrentQuestion();
+      const feedbackBox = document.getElementById('feedbackContainer');
+
+      if (q.type === 'sentence_classification') {
+        verifySentenceClassification(q, feedbackBox);
+      } else {
+        verifyTokenSelection(q, feedbackBox);
+      }
+    }
+
+    function verifySentenceClassification(q, feedbackBox) {
+      const keys = Object.keys(appState.sentenceClassifications);
+      if (keys.length < q.sentences.length) {
+        shakeElement(document.getElementById('textArenaContainer'));
+        showWarningNotice("请为所有句子都标记出 [事实] 或 [推论] 属性后，再提交验证。");
+        return;
+      }
+
+      let allCorrect = true;
+      const explanationCards = q.sentences.map(sent => {
+        const userChoice = appState.sentenceClassifications[sent.id];
+        const isRight = userChoice === sent.expected;
+        if (!isRight) allCorrect = false;
+
+        return `
+          <div class="p-3 rounded-lg border text-xs leading-relaxed ${isRight ? 'bg-slate-900/80 border-emerald-500/40' : 'bg-rose-950/20 border-rose-500/40'}">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-mono font-bold ${isRight ? 'text-emerald-400' : 'text-rose-400'}">
+                ${isRight ? '✓ 正确识别' : '✗ 属性误判'}: 句子属于【${sent.typeLabel}】
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                你的选择: ${userChoice === 'fact' ? '事实' : '推论'}
+              </span>
+            </div>
+            <p class="text-slate-300">${sent.reason}</p>
+          </div>
+        `;
+      }).join('');
+
+      renderFeedbackResult(allCorrect, explanationCards, q);
+    }
+
+    function verifyTokenSelection(q, feedbackBox) {
+      if (appState.selectedTokens.length === 0) {
+        shakeElement(document.getElementById('textArenaContainer'));
+        showWarningNotice("请在上方文本中点击选中目标单词后再提交验证。");
+        return;
+      }
+
+      const words = q.snippet.split(/\s+/);
+      const chosenWords = appState.selectedTokens.map(idx => sanitizeToken(words[idx]));
+      const expectedWords = q.correctTokens.map(t => sanitizeToken(t));
+
+      // Calculate matches
+      const isCorrect = expectedWords.every(exp => chosenWords.includes(exp)) && (chosenWords.length === expectedWords.length);
+
+      let detailsHtml = '';
+
+      if (q.analysis) {
+        if (q.analysis.explanation) {
+          detailsHtml += `<div class="mb-3 text-slate-200 text-xs sm:text-sm leading-relaxed">${q.analysis.explanation}</div>`;
+        }
+
+        if (q.analysis.modifierTraps) {
+          detailsHtml += `
+            <div class="mt-2 p-2.5 rounded bg-slate-950/80 border border-slate-800 text-xs">
+              <div class="text-rose-400 font-semibold mb-1">审稿人定语迷雾干扰项：</div>
+              <ul class="list-disc list-inside text-slate-400 space-y-0.5">
+                ${q.analysis.modifierTraps.map(trap => `<li><span class="font-mono text-slate-300">${trap}</span></li>`).join('')}
+              </ul>
+            </div>
+          `;
+        }
+
+        if (q.analysis.hedgingTokens) {
+          detailsHtml += `
+            <div class="mt-2 space-y-1.5">
+              <div class="text-sky-400 font-semibold text-xs">防御性词汇剖析：</div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                ${q.analysis.hedgingTokens.map(item => `
+                  <div class="p-2 rounded bg-slate-950 border border-slate-800 text-xs">
+                    <span class="font-mono font-bold text-amber-300">${item.word}</span>
+                    <span class="text-[10px] text-slate-400 block mt-0.5">${item.desc}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        if (q.analysis.reviewerAngle) {
+          detailsHtml += `
+            <div class="mt-2 p-2.5 rounded bg-amber-950/20 border border-amber-800/40 text-xs">
+              <span class="text-amber-400 font-semibold">审稿人攻击视角 (Reviewer Critique): </span>
+              <span class="text-slate-300">${q.analysis.reviewerAngle}</span>
+            </div>
+          `;
+        }
+      }
+
+      renderFeedbackResult(isCorrect, detailsHtml, q);
+    }
+
+    function renderFeedbackResult(isCorrect, contentHtml, q) {
+      const feedbackBox = document.getElementById('feedbackContainer');
+      feedbackBox.classList.remove('hidden');
+
+      if (isCorrect) {
+        // Increment streak and store solved ID
+        appState.streak += 1;
+        if (!appState.solvedQuestionIds.includes(q.id)) {
+          appState.solvedQuestionIds.push(q.id);
+        }
+        saveState();
+        updateStatsHeader();
+        renderQuestionListNav();
+
+        // Trigger confetti
+        if (typeof confetti === 'function') {
+          confetti({
+            particleCount: 40,
+            spread: 60,
+            origin: { y: 0.8 },
+            colors: ['#38bdf8', '#34d399', '#f59e0b']
+          });
+        }
+
+        feedbackBox.className = "rounded-xl border border-emerald-500/50 bg-emerald-950/20 p-5";
+        feedbackBox.innerHTML = `
+          <div class="flex items-center justify-between gap-4 mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                ✓
+              </div>
+              <div>
+                <h4 class="font-bold text-emerald-300 text-sm sm:text-base">击穿学术定语迷雾！答案完全正确</h4>
+                <p class="text-[11px] text-emerald-400/80">已形成本微动作的直觉肌肉记忆</p>
+              </div>
+            </div>
+            
+            <button id="nextQuestionBtn" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-md shadow-emerald-700/30">
+              <span>下一题</span>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          
+          <div class="border-t border-emerald-800/40 pt-3">
+            ${contentHtml}
+          </div>
+        `;
+
+        document.getElementById('nextQuestionBtn').onclick = advanceNextQuestion;
+      } else {
+        // Reset streak on error
+        appState.streak = 0;
+        saveState();
+        updateStatsHeader();
+
+        shakeElement(document.getElementById('textArenaContainer'));
+
+        feedbackBox.className = "rounded-xl border border-rose-500/50 bg-rose-950/20 p-5 animate-shake";
+        feedbackBox.innerHTML = `
+          <div class="flex items-center justify-between gap-4 mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
+                ✗
+              </div>
+              <div>
+                <h4 class="font-bold text-rose-300 text-sm sm:text-base">逻辑未闭环或被修饰成分带偏</h4>
+                <p class="text-[11px] text-rose-400/80">别灰心，审稿人常年在此处给读者设套。分析如下：</p>
+              </div>
+            </div>
+            
+            <button id="retryBtn" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition border border-slate-700">
+              重新尝试
+            </button>
+          </div>
+          
+          <div class="border-t border-rose-900/40 pt-3">
+            ${contentHtml}
+          </div>
+        `;
+
+        document.getElementById('retryBtn').onclick = () => {
+          feedbackBox.classList.add('hidden');
+          appState.selectedTokens = [];
+          appState.sentenceClassifications = {};
+          renderActiveQuestion();
+        };
+      }
+
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+
+    function advanceNextQuestion() {
+      const currentTrack = getCurrentTrack();
+      if (appState.activeQuestionIndex < currentTrack.questions.length - 1) {
+        appState.activeQuestionIndex += 1;
+      } else {
+        // Go to next track if exists
+        const tracks = getAllTracks();
+        const currentIdx = tracks.findIndex(t => t.id === appState.activeTrackId);
+        if (currentIdx < tracks.length - 1) {
+          appState.activeTrackId = tracks[currentIdx + 1].id;
+          appState.activeQuestionIndex = 0;
+        } else {
+          showWarningNotice("恭喜！你已通关所有顶会学术阅读关卡！可以在右上角录入你自己的论文继续训练。");
+          return;
+        }
+      }
+      appState.selectedTokens = [];
+      appState.sentenceClassifications = {};
+      saveState();
+      renderApp();
+    }
+
+    function shakeElement(el) {
+      el.classList.add('animate-shake');
+      setTimeout(() => el.classList.remove('animate-shake'), 400);
+    }
+
+    function showWarningNotice(msg) {
+      const box = document.getElementById('feedbackContainer');
+      box.className = "rounded-xl border border-amber-500/50 bg-amber-950/20 p-4 text-xs text-amber-300 flex items-center justify-between";
+      box.innerHTML = `
+        <div class="flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 text-amber-400"></i>
+          <span>${msg}</span>
+        </div>
+        <button onclick="document.getElementById('feedbackContainer').classList.add('hidden')" class="text-amber-400 hover:text-white">✕</button>
+      `;
+      box.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function setupCustomPaperHandlers() {
+      const modal = document.getElementById('customModal');
+      const openBtn = document.getElementById('openCustomModalBtn');
+      const closeBtn = document.getElementById('closeCustomModalBtn');
+      const closeBtn2 = document.getElementById('closeCustomModalBtn2');
+      const form = document.getElementById('customForm');
+
+      openBtn.onclick = () => modal.classList.remove('hidden');
+      closeBtn.onclick = () => modal.classList.add('hidden');
+      closeBtn2.onclick = () => modal.classList.add('hidden');
+
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const venue = document.getElementById('custVenue').value.trim();
+        const targetTrackId = document.getElementById('custTrack').value;
+        const prompt = document.getElementById('custPrompt').value.trim();
+        const snippet = document.getElementById('custSnippet').value.trim();
+        const answersRaw = document.getElementById('custAnswers').value.trim();
+        const explanation = document.getElementById('custExplanation').value.trim();
+
+        const answers = answersRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+        const newQuestion = {
+          id: `cust_${Date.now()}`,
+          venue: venue,
+          difficulty: 'Custom',
+          prompt: prompt,
+          description: '用户自定义论文片段。',
+          hint: '基于你录入的学术逻辑与分析要点。',
+          type: 'token_selection',
+          singleTarget: answers.length === 1,
+          snippet: snippet,
+          correctTokens: answers,
+          analysis: {
+            explanation: explanation
+          }
+        };
+
+        // Attach to track or custom list
+        let customTrack = appState.customTracks.find(t => t.id === 'track_custom');
+        if (!customTrack) {
+          customTrack = {
+            id: 'track_custom',
+            title: 'My Papers: 自录论文库',
+            subtitle: 'User Custom Papers',
+            icon: 'bookmark',
+            focusTitle: '个性化顶会精读库',
+            focusDesc: '针对你当前手头在读的顶会论文，直接进行点选刻意训练。',
+            formula: '把自己的日常阅读直接转化为微动作肌肉记忆。',
+            questions: []
+          };
+          appState.customTracks.push(customTrack);
+        }
+
+        customTrack.questions.push(newQuestion);
+        appState.activeTrackId = customTrack.id;
+        appState.activeQuestionIndex = customTrack.questions.length - 1;
+        saveState();
+
+        form.reset();
+        modal.classList.add('hidden');
+        renderApp();
+      };
+    }
+
+    function setupCheatSheetHandlers() {
+      const modal = document.getElementById('cheatSheetModal');
+      const openBtn = document.getElementById('openCheatSheetBtn');
+      const closeBtn = document.getElementById('closeCheatSheetBtn');
+      const closeBtn2 = document.getElementById('closeCheatSheetBtn2');
+
+      openBtn.onclick = () => modal.classList.remove('hidden');
+      closeBtn.onclick = () => modal.classList.add('hidden');
+      closeBtn2.onclick = () => modal.classList.add('hidden');
+    }
+
+    function setupActionButtons() {
+      // Clear selection
+      document.getElementById('clearSelectionBtn').onclick = () => {
+        appState.selectedTokens = [];
+        appState.sentenceClassifications = {};
+        renderActiveQuestion();
+      };
+
+      // Verify answer
+      document.getElementById('verifyBtn').onclick = verifyCurrentAnswer;
+
+      // Toggle hint box
+      document.getElementById('showHintBtn').onclick = () => {
+        const hintBox = document.getElementById('hintBox');
+        hintBox.classList.toggle('hidden');
+      };
+
+      // Reset track progress
+      document.getElementById('resetProgressBtn').onclick = () => {
+        const currentTrack = getCurrentTrack();
+        const qIds = currentTrack.questions.map(q => q.id);
+        appState.solvedQuestionIds = appState.solvedQuestionIds.filter(id => !qIds.includes(id));
+        appState.activeQuestionIndex = 0;
+        appState.selectedTokens = [];
+        appState.sentenceClassifications = {};
+        saveState();
+        renderApp();
+      };
+    }
+
+    function renderApp() {
+      renderTrackTabs();
+      renderQuestionListNav();
+      renderActiveQuestion();
+      updateStatsHeader();
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+
+    // Startup initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      setupActionButtons();
+      setupCheatSheetHandlers();
+      setupCustomPaperHandlers();
+      renderApp();
+    });
+  </script>
+</body>
+</html>
